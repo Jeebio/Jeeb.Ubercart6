@@ -7,8 +7,9 @@ require_once("jeeb_lib.php");
  */
 function uc_jeeb_notification()
 {
-  $postdata = file_get_contents("php://input");
-  $json = json_decode($postdata, true);
+  $postdata  = file_get_contents("php://input");
+  $json      = json_decode($postdata, true);
+  $signature = $json['signature'];
 
   jeeb_log("Entered Jeeb-Notification");
   if ( $json['stateId']== 2 ) {
@@ -36,31 +37,13 @@ function uc_jeeb_notification()
       "token" => $token,
     );
 
-    $data_string = json_encode($data);
-    $api_key = variable_get('uc_jeeb_current_api_key');;
-    $baseUri = "https://core.jeeb.io/api/" ;
-    $url = $baseUri.'payments/' . $api_key . '/confirm';
-    jeeb_log("Signature:".$api_key." Base-Url:".$baseUri." Url:".$url);
+    $is_confirmed = confirm_payment($signature, $data);
 
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'Content-Type: application/json',
-        'Content-Length: ' . strlen($data_string))
-    );
-
-    $result = curl_exec($ch);
-    $data = json_decode( $result , true);
-    jeeb_log("data = ".var_export($data, TRUE));
-
-
-    if($data['result']['isConfirmed']){
+    if($is_confirmed){
       jeeb_log('Payment confirmed by jeeb');
       $comment = t('Secure Payment ID: @id confirmed by Jeeb.', array('@id' => $json["referenceNo"]));
       uc_payment_enter($order->order_id, 'jeeb', uc_order_get_total($order), $order->uid, NULL, $comment, time());
-      uc_order_comment_save($order->order_id, 0, t('Payment of @amount was confirmed by Jeeb.', array('@amount' => $json["value"])), 'admin');
+      uc_order_comment_save($order->order_id, 0, t('Payment of @amount was confirmed by Jeeb. Secure Payment ID: @refId confirmed by Jeeb.', array('@amount' => $json["value"], '@refId' => $json["referenceNo"])), 'admin');
 
       $order->order_status = 'completed';
       uc_order_save($order);
