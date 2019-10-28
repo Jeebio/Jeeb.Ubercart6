@@ -1,6 +1,6 @@
 <?php
 
-define ('PLUGIN_NAME', 'easydigitaldownloads');
+define ('PLUGIN_NAME', 'drupal6-ubercart');
 define ('PLUGIN_VERSION', '3.0');
 define ('BASE_URL', "https://core.jeeb.io/api/");
 
